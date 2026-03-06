@@ -3,61 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Simple Website</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 20px;
-            color: #333;
-        }
-        header {
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
-            margin-bottom: 20px;
-        }
-        nav a {
-            margin-right: 15px;
-            text-decoration: none;
-            color: #007BFF;
-        }
-        nav a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>Thai Consonant Drill</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-white text-gray-900 font-sans">
 
-    <header>
-        <h1>Welcome to My Site</h1>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="about.html">About</a>
-            <a href="contact.html">Contact</a>
-        </nav>
-    </header>
+    <div id="welcome-screen" class="flex items-center justify-center min-h-screen">
+        <div class="bg-white p-8 rounded-lg shadow-[0_0_15px_rgba(0,0,0,0.1)] text-center max-w-sm w-full border border-gray-100">
+            <h2 class="text-xl font-bold mb-1">CSII Team X presents</h2>
+            <p class="text-gray-600 mb-6 text-sm">Thai Consonants</p>
+            
+            <input type="text" id="nickname-input" placeholder="nickname" 
+                   class="w-full border border-gray-400 p-2 mb-4 rounded text-sm focus:outline-none focus:border-blue-500">
+            
+            <button onclick="startQuiz()" 
+                    class="bg-[#007BFF] text-white px-6 py-2 rounded shadow hover:bg-blue-600 w-32 text-sm font-medium">
+                Start Quiz
+            </button>
+            <p id="error-msg" class="text-red-500 text-xs mt-2 hidden">Please enter a nickname.</p>
+        </div>
+    </div>
 
-    <main>
-        <section>
-            <h2>Hello, World!</h2>
-            <p>This is a simple HTML index page. You can use this as a starting point for your project.</p>
-        </section>
+    <div id="quiz-screen" class="hidden flex-col items-center justify-start min-h-screen pt-16">
+        
+        <div class="text-center mb-6">
+            <p id="display-nickname" class="font-medium text-sm">marko</p>
+            <p id="display-streak" class="text-xs text-gray-500 mb-1">Streak: 1</p>
+            <div class="flex justify-center space-x-1 text-red-500 text-sm mb-1">
+                <span>❤️</span><span>❤️</span><span>❤️</span>
+            </div>
+            <p class="text-xs text-gray-600">Remaining: 35</p>
+        </div>
 
-        <section>
-            <h3>Quick Links</h3>
-            <ul>
-                <li>Project One</li>
-                <li>Project Two</li>
-                <li>My Resume</li>
-            </ul>
-        </section>
-    </main>
+        <h1 class="text-base font-bold mb-10">Thai Consonant Drill</h1>
+        
+        <div class="text-[120px] leading-none mb-12">ย</div>
+        
+        <div class="flex flex-col space-y-3 w-64">
+            <button class="bg-[#F0F2F5] py-2.5 rounded text-xs text-gray-700 hover:bg-gray-200 transition">bor bai-mai — Middle</button>
+            <button class="bg-[#F0F2F5] py-2.5 rounded text-xs text-gray-700 hover:bg-gray-200 transition">to patak — Middle</button>
+            <button class="bg-[#F0F2F5] py-2.5 rounded text-xs text-gray-700 hover:bg-gray-200 transition">yor yak — Low</button>
+        </div>
+    </div>
 
-    <footer>
-        <p>&copy; 2026 Your Name</p>
-    </footer>
+    <script>
+        async function startQuiz() {
+            const nickname = document.getElementById('nickname-input').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+            
+            if (!nickname) {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            errorMsg.classList.add('hidden');
 
+            try {
+                // Call the FastAPI backend
+                const response = await fetch('http://localhost:8000/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: nickname })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update UI with data from database
+                    document.getElementById('display-nickname').textContent = data.nickname;
+                    document.getElementById('display-streak').textContent = `Streak: ${data.streak_counter}`;
+                    
+                    // Switch screens
+                    document.getElementById('welcome-screen').classList.add('hidden');
+                    document.getElementById('quiz-screen').classList.remove('hidden');
+                    document.getElementById('quiz-screen').classList.add('flex');
+                } else {
+                    console.error("Failed to start quiz on backend.");
+                    alert("Backend error. Make sure FastAPI is running.");
+                }
+            } catch (error) {
+                console.error("Network error:", error);
+                alert("Could not connect to the backend. Is FastAPI running on port 8000?");
+            }
+        }
+    </script>
 </body>
 </html>
