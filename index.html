@@ -42,9 +42,9 @@
         <div class="text-center text-8xl mb-8">ฌ</div>
         
         <div class="space-y-3">
-            <button class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">phor phan — Low</button>
-            <button class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">hor hip — High</button>
-            <button class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">tor tao — Middle</button>
+            <button onclick="checkAnswer('Low')" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">phor phan — Low</button>
+            <button onclick="checkAnswer('High')" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">hor hip — High</button>
+            <button onclick="checkAnswer('Middle')" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">tor tao — Middle</button>
         </div>
     </div>
 </div>
@@ -60,6 +60,7 @@ async function startQuiz() {
     }
     
     try {
+        // We are using your LIVE Render backend again!
         const response = await fetch('https://improved-disco-service.onrender.com/api/quiz/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -74,12 +75,21 @@ async function startQuiz() {
         document.getElementById('welcome-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
         
-        // Show streak exactly like lab screenshot
+        // Show the real data from your Postgres database!
         document.getElementById('user-info').innerHTML = `${data.nickname} — Starts: ${data.starts}`;
         
     } catch (err) {
-        alert("Backend not connected yet.\n\nFinish the Render steps (Postgres + service) first, then redeploy.\n\nError: " + err.message);
+        alert("Backend not connected yet.\n\nError: " + err.message);
     }
+}
+
+function checkAnswer(answer) {
+    if (answer === 'Low') {
+        alert('Correct! ฌ is a Low consonant.');
+    } else {
+        alert('Incorrect. ฌ is a Low consonant.');
+    }
+    // TODO: implement full quiz logic
 }
 </script>
 
