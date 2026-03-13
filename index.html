@@ -50,7 +50,6 @@
 </div>
 
 <script>
-// A small sample of Thai consonants (you can add the rest later!)
 const thaiConsonants = [
     { char: 'ก', class: 'Middle', name: 'gor gai' },
     { char: 'ข', class: 'High', name: 'khor khai' },
@@ -62,6 +61,7 @@ const thaiConsonants = [
 ];
 
 let hearts = 3;
+let score = 0; // NEW: Track the score!
 let availableQuestions = [];
 let currentConsonant = null;
 let currentNickname = "";
@@ -76,7 +76,6 @@ async function startQuiz() {
     }
     
     try {
-        // Tell the backend we are starting
         const response = await fetch('https://improved-disco-service.onrender.com/api/quiz/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -86,14 +85,15 @@ async function startQuiz() {
         if (!response.ok) throw new Error("Backend not ready yet");
         const data = await response.json();
         
-        // Switch screens and show stats
         document.getElementById('welcome-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
-        document.getElementById('user-info').innerHTML = `${data.nickname} — Starts: ${data.starts}`;
         
-        // Setup the game!
+        // We added your current score to the display!
+        document.getElementById('user-info').innerHTML = `${data.nickname} — Starts: ${data.starts} | Score: <span id="score-display">0</span>`;
+        
         hearts = 3;
-        availableQuestions = [...thaiConsonants]; // Copy the array
+        score = 0;
+        availableQuestions = [...thaiConsonants]; 
         updateHeartsDisplay();
         loadNextQuestion();
         
@@ -103,66 +103,50 @@ async function startQuiz() {
 }
 
 function loadNextQuestion() {
-    if (hearts <= 0) {
-        alert("Game Over! You ran out of hearts. Refresh to try again!");
-        return;
-    }
     if (availableQuestions.length === 0) {
-        alert("You Win! You conquered the Thai alphabet!");
+        alert(`You Win! You conquered the Thai alphabet! Final Score: ${score}`);
+        saveHighScore(score);
         return;
     }
 
-    // 1. Pick a random correct letter
     const randomIndex = Math.floor(Math.random() * availableQuestions.length);
     currentConsonant = availableQuestions[randomIndex];
-
-    // Remove it from the available list so we don't get it again
     availableQuestions.splice(randomIndex, 1);
 
-    // Update the big letter and remaining count on screen
     document.getElementById('remaining').innerText = `Remaining: ${availableQuestions.length + 1}`;
     document.getElementById('big-letter').innerText = currentConsonant.char;
 
-    // 2. Create the choices (1 correct, 2 wrong)
-    let choices = [currentConsonant]; // Start with the correct answer
-    
+    let choices = [currentConsonant]; 
     while (choices.length < 3) {
-        // Grab a random consonant from the master list
         let randomWrong = thaiConsonants[Math.floor(Math.random() * thaiConsonants.length)];
-        
-        // Make sure we don't accidentally pick the same one twice!
         if (!choices.includes(randomWrong)) {
             choices.push(randomWrong);
         }
     }
 
-    // 3. Shuffle the choices so the correct answer isn't always the top button
     choices.sort(() => Math.random() - 0.5);
 
-    // 4. Update the text and clicks on the 3 buttons
     for (let i = 0; i < 3; i++) {
         let btn = document.getElementById(`choice-${i + 1}`);
         btn.innerText = `${choices[i].name} — ${choices[i].class}`;
-        
-        // Tell the button to check if its character matches the correct character
         btn.onclick = function() { checkAnswer(choices[i].char); };
     }
 }
 
 function checkAnswer(selectedChar) {
     if (selectedChar === currentConsonant.char) {
-        // Correct! Load the next question immediately
+        score++; // Increase score!
+        document.getElementById('score-display').innerText = score; // Update screen
         loadNextQuestion();
     } else {
-        // Wrong! Lose a heart
         hearts--;
         updateHeartsDisplay();
-        
         if (hearts > 0) {
             alert(`Oops! ${currentConsonant.char} is ${currentConsonant.name} (${currentConsonant.class}). Try the next one!`);
             loadNextQuestion();
         } else {
-            alert(`Game Over! ${currentConsonant.char} was ${currentConsonant.name} (${currentConsonant.class}).`);
+            alert(`Game Over! ${currentConsonant.char} was ${currentConsonant.name} (${currentConsonant.class}). Final Score: ${score}`);
+            saveHighScore(score);
         }
     }
 }
@@ -170,8 +154,29 @@ function checkAnswer(selectedChar) {
 function updateHeartsDisplay() {
     let heartString = "";
     for(let i=0; i<hearts; i++) { heartString += "❤️"; }
-    for(let i=hearts; i<3; i++) { heartString += "🤍"; } // Broken/empty hearts
+    for(let i=hearts; i<3; i++) { heartString += "🤍"; }
     document.getElementById('hearts').innerText = heartString;
+}
+
+// NEW: Send the final score to the Postgres Database!
+async function saveHighScore(finalScore) {
+    try {
+        const response = await fetch('https://improved-disco-service.onrender.com/api/quiz/score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nickname: currentNickname, score: finalScore })
+        });
+        const data = await response.json();
+        
+        if (data.high_score !== undefined) {
+            alert(`Score saved! Your all-time high score in the database is: ${data.high_score}`);
+        }
+    } catch (err) {
+        console.error("Error saving score:", err);
+    }
+    
+    // Refresh the page so they can play again
+    location.reload();
 }
 </script>
 
