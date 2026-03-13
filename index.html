@@ -39,7 +39,7 @@
         <h2 class="text-center text-3xl font-bold mt-8 mb-6">Thai Consonant Drill</h2>
         
         <!-- Example drill (you can expand later) -->
-        <div class="text-center text-8xl mb-8">ฌ</div>
+        <div id="big-letter" class="text-center text-8xl mb-8">ฌ</div>
         
         <div class="space-y-3">
             <button onclick="checkAnswer('Low')" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">phor phan — Low</button>
@@ -50,46 +50,104 @@
 </div>
 
 <script>
+// A small sample of Thai consonants (you can add the rest later!)
+const thaiConsonants = [
+    { char: 'ก', class: 'Middle', name: 'gor gai' },
+    { char: 'ข', class: 'High', name: 'khor khai' },
+    { char: 'ค', class: 'Low', name: 'khor khwai' },
+    { char: 'ง', class: 'Low', name: 'ngor ngu' },
+    { char: 'จ', class: 'Middle', name: 'jor jan' },
+    { char: 'ฉ', class: 'High', name: 'chor ching' },
+    { char: 'ฌ', class: 'Low', name: 'chor choe' }
+];
+
+let hearts = 3;
+let availableQuestions = [];
+let currentConsonant = null;
+let currentNickname = "";
+
 async function startQuiz() {
     const nickInput = document.getElementById('nickname-input');
-    const nickname = nickInput.value.trim();
+    currentNickname = nickInput.value.trim();
     
-    if (!nickname) {
+    if (!currentNickname) {
         document.getElementById('error-msg').classList.remove('hidden');
         return;
     }
     
     try {
-        // We are using your LIVE Render backend again!
+        // Tell the backend we are starting
         const response = await fetch('https://improved-disco-service.onrender.com/api/quiz/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nickname: nickname })
+            body: JSON.stringify({ nickname: currentNickname })
         });
         
         if (!response.ok) throw new Error("Backend not ready yet");
-        
         const data = await response.json();
         
-        // Switch screens
+        // Switch screens and show stats
         document.getElementById('welcome-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
-        
-        // Show the real data from your Postgres database!
         document.getElementById('user-info').innerHTML = `${data.nickname} — Starts: ${data.starts}`;
         
+        // Setup the game!
+        hearts = 3;
+        availableQuestions = [...thaiConsonants]; // Copy the array
+        updateHeartsDisplay();
+        loadNextQuestion();
+        
     } catch (err) {
-        alert("Backend not connected yet.\n\nError: " + err.message);
+        alert("Backend error: " + err.message);
     }
 }
 
-function checkAnswer(answer) {
-    if (answer === 'Low') {
-        alert('Correct! ฌ is a Low consonant.');
-    } else {
-        alert('Incorrect. ฌ is a Low consonant.');
+function loadNextQuestion() {
+    if (hearts <= 0) {
+        alert("Game Over! You ran out of hearts. Refresh to try again!");
+        return;
     }
-    // TODO: implement full quiz logic
+    if (availableQuestions.length === 0) {
+        alert("You Win! You conquered the Thai alphabet!");
+        return;
+    }
+
+    // Pick a random letter
+    const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+    currentConsonant = availableQuestions[randomIndex];
+
+    // Remove it from the list so we don't get it again
+    availableQuestions.splice(randomIndex, 1);
+
+    // Update the screen
+    document.getElementById('remaining').innerText = `Remaining: ${availableQuestions.length + 1}`;
+    document.getElementById('big-letter').innerText = currentConsonant.char;
+}
+
+function checkAnswer(selectedClass) {
+    // Check if they clicked the right button
+    if (selectedClass === currentConsonant.class) {
+        // Correct! Just load the next question
+        loadNextQuestion();
+    } else {
+        // Wrong! Lose a heart
+        hearts--;
+        updateHeartsDisplay();
+        
+        if (hearts > 0) {
+            alert(`Oops! ${currentConsonant.char} (${currentConsonant.name}) is a ${currentConsonant.class} consonant.`);
+            loadNextQuestion();
+        } else {
+            alert(`Game Over! ${currentConsonant.char} was a ${currentConsonant.class} consonant.`);
+        }
+    }
+}
+
+function updateHeartsDisplay() {
+    let heartString = "";
+    for(let i=0; i<hearts; i++) { heartString += "❤️"; }
+    for(let i=hearts; i<3; i++) { heartString += "🤍"; } // Broken/empty hearts
+    document.getElementById('hearts').innerText = heartString;
 }
 </script>
 
