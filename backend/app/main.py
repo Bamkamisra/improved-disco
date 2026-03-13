@@ -34,7 +34,7 @@ def get_db_connection():
         host=host, port=port, cursor_factory=RealDictCursor
     )
 
-# Create table on startup
+# Create table and add high_score column on startup
 @app.on_event("startup")
 async def startup():
     conn = get_db_connection()
@@ -45,12 +45,20 @@ async def startup():
             starts INTEGER DEFAULT 0
         )
     """)
+    # This safely adds the high_score column if it doesn't exist yet!
+    cur.execute("""
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS high_score INTEGER DEFAULT 0
+    """)
     conn.commit()
     cur.close()
     conn.close()
 
 class StartRequest(BaseModel):
     nickname: str
+
+class ScoreRequest(BaseModel):
+    nickname: str
+    score: int
 
 @app.post("/api/quiz/start")
 def start_quiz(req: StartRequest):
@@ -68,6 +76,27 @@ def start_quiz(req: StartRequest):
     cur.close()
     conn.close()
     return {"nickname": req.nickname, "starts": new_count}
+
+# NEW: Endpoint to save the score!
+@app.post("/api/quiz/score")
+def save_score(req: ScoreRequest):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # GREATEST makes sure we only update it if the new score is higher than the old one
+    cur.execute("""
+        UPDATE users 
+        SET high_score = GREATEST(high_score, %s)
+        WHERE nickname = %s
+        RETURNING high_score
+    """, (req.score, req.nickname))
+    result = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    if result:
+        return {"nickname": req.nickname, "high_score": result['high_score']}
+    return {"error": "User not found"}
 
 @app.get("/health")
 def health():
