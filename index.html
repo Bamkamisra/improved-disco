@@ -42,9 +42,9 @@
         <div id="big-letter" class="text-center text-8xl mb-8">ฌ</div>
         
         <div class="space-y-3">
-            <button onclick="checkAnswer('Low')" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">phor phan — Low</button>
-            <button onclick="checkAnswer('High')" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">hor hip — High</button>
-            <button onclick="checkAnswer('Middle')" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg">tor tao — Middle</button>
+            <button id="choice-1" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg"></button>
+            <button id="choice-2" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg"></button>
+            <button id="choice-3" class="w-full bg-gray-100 hover:bg-gray-200 py-4 rounded text-lg"></button>
         </div>
     </div>
 </div>
@@ -112,22 +112,46 @@ function loadNextQuestion() {
         return;
     }
 
-    // Pick a random letter
+    // 1. Pick a random correct letter
     const randomIndex = Math.floor(Math.random() * availableQuestions.length);
     currentConsonant = availableQuestions[randomIndex];
 
-    // Remove it from the list so we don't get it again
+    // Remove it from the available list so we don't get it again
     availableQuestions.splice(randomIndex, 1);
 
-    // Update the screen
+    // Update the big letter and remaining count on screen
     document.getElementById('remaining').innerText = `Remaining: ${availableQuestions.length + 1}`;
     document.getElementById('big-letter').innerText = currentConsonant.char;
+
+    // 2. Create the choices (1 correct, 2 wrong)
+    let choices = [currentConsonant]; // Start with the correct answer
+    
+    while (choices.length < 3) {
+        // Grab a random consonant from the master list
+        let randomWrong = thaiConsonants[Math.floor(Math.random() * thaiConsonants.length)];
+        
+        // Make sure we don't accidentally pick the same one twice!
+        if (!choices.includes(randomWrong)) {
+            choices.push(randomWrong);
+        }
+    }
+
+    // 3. Shuffle the choices so the correct answer isn't always the top button
+    choices.sort(() => Math.random() - 0.5);
+
+    // 4. Update the text and clicks on the 3 buttons
+    for (let i = 0; i < 3; i++) {
+        let btn = document.getElementById(`choice-${i + 1}`);
+        btn.innerText = `${choices[i].name} — ${choices[i].class}`;
+        
+        // Tell the button to check if its character matches the correct character
+        btn.onclick = function() { checkAnswer(choices[i].char); };
+    }
 }
 
-function checkAnswer(selectedClass) {
-    // Check if they clicked the right button
-    if (selectedClass === currentConsonant.class) {
-        // Correct! Just load the next question
+function checkAnswer(selectedChar) {
+    if (selectedChar === currentConsonant.char) {
+        // Correct! Load the next question immediately
         loadNextQuestion();
     } else {
         // Wrong! Lose a heart
@@ -135,10 +159,10 @@ function checkAnswer(selectedClass) {
         updateHeartsDisplay();
         
         if (hearts > 0) {
-            alert(`Oops! ${currentConsonant.char} (${currentConsonant.name}) is a ${currentConsonant.class} consonant.`);
+            alert(`Oops! ${currentConsonant.char} is ${currentConsonant.name} (${currentConsonant.class}). Try the next one!`);
             loadNextQuestion();
         } else {
-            alert(`Game Over! ${currentConsonant.char} was a ${currentConsonant.class} consonant.`);
+            alert(`Game Over! ${currentConsonant.char} was ${currentConsonant.name} (${currentConsonant.class}).`);
         }
     }
 }
